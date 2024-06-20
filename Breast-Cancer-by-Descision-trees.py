@@ -3,7 +3,7 @@
 
 # # IMPORT Libraries
 
-# In[85]:
+# In[252]:
 
 
 import numpy as np
@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 
 # # READ CSV
 
-# In[86]:
+# In[253]:
 
 
 my_data = pd.read_csv("Breast_Cancer.csv", delimiter=",")
@@ -24,13 +24,13 @@ my_data[0:5]
 
 # # Gain some Information
 
-# In[87]:
+# In[254]:
 
 
 my_data['Status'].unique()
 
 
-# In[88]:
+# In[255]:
 
 
 my_data.info()
@@ -38,7 +38,7 @@ my_data.info()
 
 # # Create DataFrame
 
-# In[89]:
+# In[256]:
 
 
 df=pd.DataFrame(my_data)
@@ -46,7 +46,7 @@ df=pd.DataFrame(my_data)
 
 # # Information about quantity of values for each column
 
-# In[90]:
+# In[257]:
 
 
 for col in df.columns:
@@ -58,7 +58,7 @@ for col in df.columns:
 
 # # Gain some knowledge about numerical features
 
-# In[91]:
+# In[258]:
 
 
 numerical_columns = df.select_dtypes(include=['int', 'float']).columns
@@ -72,7 +72,7 @@ print(numerical_stats)
 
 # # Feature Selection
 
-# In[92]:
+# In[259]:
 
 
 df.info()
@@ -80,7 +80,7 @@ df.info()
 
 # # Feature selection by Descision Trees feature importance
 
-# In[93]:
+# In[260]:
 
 
 selected_columns = ['Age', 'Tumor Size', 'Regional Node Examined','Survival Months','Reginol Node Positive',]  # Replace with your actual feature names
@@ -95,7 +95,7 @@ clf = DecisionTreeClassifier(random_state=42)
 clf.fit(X_train, y_train)
 
 
-# In[94]:
+# In[261]:
 
 
 # Get feature importances
@@ -108,7 +108,7 @@ print(importance_series)
 
 # ## "Regional Node Examined" and "Reginol Node Positive" should be dropped
 
-# In[95]:
+# In[262]:
 
 
 categorical_columns = ['Status','Marital Status', 'differentiate','Race','T Stage ','Progesterone Status','N Stage','6th Stage','Grade','A Stage','Estrogen Status']  # Your actual feature names
@@ -123,7 +123,7 @@ for col in categorical_columns:
                 
 
 
-# In[96]:
+# In[263]:
 
 
 X = df[X_columns]
@@ -136,7 +136,7 @@ clf = DecisionTreeClassifier(random_state=42)
 clf.fit(X_train, y_train)
 
 
-# In[97]:
+# In[264]:
 
 
 # Get feature importances
@@ -152,14 +152,14 @@ print(importance_series)
 # # Selecting top features
 # ## There are 3 numerical, 1 categorical, and 1 binary columns
 
-# In[98]:
+# In[265]:
 
 
 columns_to_drop=['T Stage ','N Stage','differentiate','Race','Grade','A Stage','Estrogen Status','Progesterone Status','Reginol Node Positive','Regional Node Examined']
 df.drop(columns=columns_to_drop, inplace=True)  # Use inplace=True to modify the original DataFrame
 
 
-# In[99]:
+# In[266]:
 
 
 df
@@ -167,7 +167,7 @@ df
 
 # # Categorizing Numerical features
 
-# In[100]:
+# In[267]:
 
 
 def entropy(y):
@@ -207,34 +207,34 @@ def categorize_numerical_feature(df, feature_name, target_name):
     return df
 
 
-# In[101]:
+# In[268]:
 
 
 df = categorize_numerical_feature(df, 'Age', 'Status')
 df['Age_categorized'].value_counts()
 
 
-# In[102]:
+# In[269]:
 
 
 df = categorize_numerical_feature(df, 'Tumor Size', 'Status')
 df['Tumor Size_categorized'].value_counts()
 
 
-# In[103]:
+# In[270]:
 
 
 df = categorize_numerical_feature(df, 'Survival Months', 'Status')
 df['Survival Months_categorized'].value_counts()
 
 
-# In[104]:
+# In[271]:
 
 
 df
 
 
-# In[105]:
+# In[272]:
 
 
 df['Status'].value_counts()
@@ -242,7 +242,7 @@ df['Status'].value_counts()
 
 # ### 0 means "Alive", 1 means "Dead"
 
-# In[106]:
+# In[273]:
 
 
 dead_count=int(df['Status'].value_counts().get(1,0))
@@ -253,7 +253,7 @@ print(f'Dateset size is {dataset_size} \n{alive_count} are alive and {dead_count
 
 # # Calculate IG
 
-# In[107]:
+# In[274]:
 
 
 p_dead=dead_count/dataset_size
@@ -262,7 +262,7 @@ main_entropy=(-p_dead*np.log2(p_dead))-(p_alive*np.log2(p_alive))
 main_entropy
 
 
-# In[122]:
+# In[275]:
 
 
 def entropy(y):
@@ -283,13 +283,13 @@ def information_gain(y, feature_values):
     return total_entropy - weighted_entropy
 
 
-# In[110]:
+# In[276]:
 
 
 df
 
 
-# In[123]:
+# In[277]:
 
 
 gain_age = information_gain(df['Status'], df['Age_categorized'])
@@ -299,6 +299,122 @@ gain_month = information_gain(df['Status'], df['Survival Months_categorized'])
 gain_tumor = information_gain(df['Status'], df['Tumor Size_categorized'])
 
 print(f"Information Gains : \nAge={gain_age} , Marital status={gain_marital} \n6th stage={gain_6stage} , Survival months={gain_month} , Tumor size={gain_tumor}")
+
+
+# # Building tree
+
+# In[297]:
+
+
+df1=df[['Status','Age_categorized','Marital Status','6th Stage','Survival Months_categorized','Tumor Size_categorized']].copy()
+
+
+# In[298]:
+
+
+df1
+
+
+# In[314]:
+
+
+def best_feature_to_split(df, target_name):
+    features = df.columns.drop(target_name)
+    best_gain = -1
+    best_feature = None
+    
+    for feature in features:
+        gain = information_gain(df[target_name], df[feature])
+        if gain > best_gain:
+            best_gain = gain
+            best_feature = feature
+            
+    return best_feature
+
+
+# In[315]:
+
+
+def build_tree(df, target_name):
+    # If all target values are the same, return a leaf node
+    if len(np.unique(df[target_name])) == 1:
+        return df[target_name].iloc[0]
+    
+    # If there are no more features to split on, return the most common target value
+    if len(df.columns) == 1:
+        return df[target_name].mode()[0]
+    
+    # Choose the best feature to split on
+    best_feature = best_feature_to_split(df, target_name)
+    if best_feature is None:
+        return df[target_name].mode()[0]
+    
+    # Create the tree structure
+    tree = {best_feature: {}}
+    unique_values = np.unique(df[best_feature])
+    
+    # Split the dataset and recursively build subtrees
+    for value in unique_values:
+        subset = df[df[best_feature] == value].drop(columns=[best_feature])
+        subtree = build_tree(subset, target_name)
+        tree[best_feature][value] = subtree
+        
+    return tree
+
+
+# In[316]:
+
+
+tree = build_tree(df1, 'Status')
+
+
+# In[301]:
+
+
+tree
+
+
+# # Predict
+
+# In[318]:
+
+
+def predict(tree, sample):
+    # Traverse the tree until a leaf node is reached
+    while isinstance(tree, dict):
+        feature, subtree = next(iter(tree.items()))
+        value = sample.get(feature)  # Get the value of the feature from the sample
+        tree = subtree.get(value)  # Move to the next subtree based on the feature value
+
+    return tree  # Return the predicted class label
+
+# Example usage:
+# Assume sample is a dictionary with feature values for a new instance
+sample = {
+    'Survival Months_categorized': '> 47.5',
+    'Age_categorized': '> 61.5',
+    '6th Stage': 0,
+    'Tumor Size_categorized': '> 17.5',
+    'Marital Status': 0
+}
+
+# Assuming 'tree' is already defined as your decision tree structure
+prediction = predict(tree, sample)
+print("Predicted class:", prediction)
+
+
+# In[319]:
+
+
+sample = {
+    'Survival Months_categorized': '<= 47.5',
+    'Age_categorized': '> 61.5',
+    '6th Stage': 3,
+    'Tumor Size_categorized': '> 17.5',
+    'Marital Status': 4
+}
+prediction = predict(tree, sample)
+print("Predicted class:", prediction)
 
 
 # In[ ]:
