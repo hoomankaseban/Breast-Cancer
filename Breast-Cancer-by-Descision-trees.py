@@ -3,7 +3,7 @@
 
 # # IMPORT Libraries
 
-# In[252]:
+# In[260]:
 
 
 import numpy as np
@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 
 # # READ CSV
 
-# In[253]:
+# In[261]:
 
 
 my_data = pd.read_csv("Breast_Cancer.csv", delimiter=",")
@@ -24,13 +24,13 @@ my_data[0:5]
 
 # # Gain some Information
 
-# In[254]:
+# In[262]:
 
 
 my_data['Status'].unique()
 
 
-# In[255]:
+# In[263]:
 
 
 my_data.info()
@@ -38,7 +38,7 @@ my_data.info()
 
 # # Create DataFrame
 
-# In[256]:
+# In[264]:
 
 
 df=pd.DataFrame(my_data)
@@ -46,7 +46,7 @@ df=pd.DataFrame(my_data)
 
 # # Information about quantity of values for each column
 
-# In[257]:
+# In[265]:
 
 
 for col in df.columns:
@@ -56,9 +56,9 @@ for col in df.columns:
         print()  # Print an empty line for separation
 
 
-# # Gain some knowledge about numerical features
+# # Gain knowledge about numerical features
 
-# In[258]:
+# In[266]:
 
 
 numerical_columns = df.select_dtypes(include=['int', 'float']).columns
@@ -70,17 +70,11 @@ print("Descriptive statistics for numerical columns:")
 print(numerical_stats)
 
 
-# # Feature Selection
-
-# In[259]:
-
-
-df.info()
-
-
 # # Feature selection by Descision Trees feature importance
 
-# In[260]:
+# ### Selection in numerical features
+
+# In[267]:
 
 
 selected_columns = ['Age', 'Tumor Size', 'Regional Node Examined','Survival Months','Reginol Node Positive',]  # Replace with your actual feature names
@@ -95,7 +89,7 @@ clf = DecisionTreeClassifier(random_state=42)
 clf.fit(X_train, y_train)
 
 
-# In[261]:
+# In[268]:
 
 
 # Get feature importances
@@ -108,7 +102,9 @@ print(importance_series)
 
 # ## "Regional Node Examined" and "Reginol Node Positive" should be dropped
 
-# In[262]:
+# ### Selection in categorical features
+
+# In[269]:
 
 
 categorical_columns = ['Status','Marital Status', 'differentiate','Race','T Stage ','Progesterone Status','N Stage','6th Stage','Grade','A Stage','Estrogen Status']  # Your actual feature names
@@ -123,7 +119,7 @@ for col in categorical_columns:
                 
 
 
-# In[263]:
+# In[270]:
 
 
 X = df[X_columns]
@@ -136,7 +132,7 @@ clf = DecisionTreeClassifier(random_state=42)
 clf.fit(X_train, y_train)
 
 
-# In[264]:
+# In[271]:
 
 
 # Get feature importances
@@ -152,14 +148,14 @@ print(importance_series)
 # # Selecting top features
 # ## There are 3 numerical, 1 categorical, and 1 binary columns
 
-# In[265]:
+# In[272]:
 
 
 columns_to_drop=['T Stage ','N Stage','differentiate','Race','Grade','A Stage','Estrogen Status','Progesterone Status','Reginol Node Positive','Regional Node Examined']
 df.drop(columns=columns_to_drop, inplace=True)  # Use inplace=True to modify the original DataFrame
 
 
-# In[266]:
+# In[273]:
 
 
 df
@@ -167,7 +163,7 @@ df
 
 # # Categorizing Numerical features
 
-# In[267]:
+# In[274]:
 
 
 def entropy(y):
@@ -207,42 +203,36 @@ def categorize_numerical_feature(df, feature_name, target_name):
     return df
 
 
-# In[268]:
+# In[275]:
 
 
 df = categorize_numerical_feature(df, 'Age', 'Status')
 df['Age_categorized'].value_counts()
 
 
-# In[269]:
+# In[276]:
 
 
 df = categorize_numerical_feature(df, 'Tumor Size', 'Status')
 df['Tumor Size_categorized'].value_counts()
 
 
-# In[270]:
+# In[277]:
 
 
 df = categorize_numerical_feature(df, 'Survival Months', 'Status')
 df['Survival Months_categorized'].value_counts()
 
 
-# In[271]:
+# In[278]:
 
 
 df
 
 
-# In[272]:
-
-
-df['Status'].value_counts()
-
-
 # ### 0 means "Alive", 1 means "Dead"
 
-# In[273]:
+# In[279]:
 
 
 dead_count=int(df['Status'].value_counts().get(1,0))
@@ -251,18 +241,51 @@ dataset_size=dead_count+alive_count
 print(f'Dateset size is {dataset_size} \n{alive_count} are alive and {dead_count} are dead')
 
 
-# # Calculate IG
+# # Spliting
 
-# In[274]:
-
-
-p_dead=dead_count/dataset_size
-p_alive=1-p_dead
-main_entropy=(-p_dead*np.log2(p_dead))-(p_alive*np.log2(p_alive))
-main_entropy
+# In[280]:
 
 
-# In[275]:
+df1=df[['Status','Age_categorized','Marital Status','6th Stage','Survival Months_categorized','Tumor Size_categorized']].copy()
+
+
+# In[281]:
+
+
+df1
+
+
+# In[282]:
+
+
+X = df1[['Age_categorized','Marital Status','6th Stage','Survival Months_categorized','Tumor Size_categorized']]
+X[0:5]
+
+
+# In[283]:
+
+
+y=df1['Status']
+y.value_counts()
+
+
+# In[284]:
+
+
+trainset, testset = train_test_split(df1, test_size=0.3, random_state=3)
+
+
+# In[285]:
+
+
+print(f'Train set size :{len(trainset)}\nTest set size :{len(testset)}')
+
+
+# # Building tree
+
+# ### Functions to Calculate IG
+
+# In[286]:
 
 
 def entropy(y):
@@ -283,39 +306,9 @@ def information_gain(y, feature_values):
     return total_entropy - weighted_entropy
 
 
-# In[276]:
+# ### Function to select the best feature to splite
 
-
-df
-
-
-# In[277]:
-
-
-gain_age = information_gain(df['Status'], df['Age_categorized'])
-gain_marital = information_gain(df['Status'], df['Marital Status'])
-gain_6stage = information_gain(df['Status'], df['6th Stage'])
-gain_month = information_gain(df['Status'], df['Survival Months_categorized'])
-gain_tumor = information_gain(df['Status'], df['Tumor Size_categorized'])
-
-print(f"Information Gains : \nAge={gain_age} , Marital status={gain_marital} \n6th stage={gain_6stage} , Survival months={gain_month} , Tumor size={gain_tumor}")
-
-
-# # Building tree
-
-# In[297]:
-
-
-df1=df[['Status','Age_categorized','Marital Status','6th Stage','Survival Months_categorized','Tumor Size_categorized']].copy()
-
-
-# In[298]:
-
-
-df1
-
-
-# In[314]:
+# In[287]:
 
 
 def best_feature_to_split(df, target_name):
@@ -332,7 +325,9 @@ def best_feature_to_split(df, target_name):
     return best_feature
 
 
-# In[315]:
+# ### Main function to build the tree
+
+# In[288]:
 
 
 def build_tree(df, target_name):
@@ -362,13 +357,13 @@ def build_tree(df, target_name):
     return tree
 
 
-# In[316]:
+# In[289]:
 
 
-tree = build_tree(df1, 'Status')
+tree = build_tree(trainset, 'Status')
 
 
-# In[301]:
+# In[290]:
 
 
 tree
@@ -376,20 +371,40 @@ tree
 
 # # Predict
 
-# In[318]:
+# In[291]:
 
 
-def predict(tree, sample):
-    # Traverse the tree until a leaf node is reached
+y_testset=testset['Status'].copy()
+y_testset
+
+
+# In[295]:
+
+
+x_testset=testset.drop(columns=['Status'])
+x_testset
+
+
+# In[305]:
+
+
+def predict_single(tree, sample):
     while isinstance(tree, dict):
-        feature, subtree = next(iter(tree.items()))
-        value = sample.get(feature)  # Get the value of the feature from the sample
-        tree = subtree.get(value)  # Move to the next subtree based on the feature value
+        feature = next(iter(tree))
+        value = sample[feature]
+        tree = tree[feature].get(value)
+        if tree is None:  # Handle cases where the value is not in the tree
+            return None  # Or some default value
+    return tree
 
-    return tree  # Return the predicted class label
+def dataframe_predict(tree, test_set):
+    predictions = test_set.apply(lambda x: predict_single(tree, x), axis=1)
+    return predictions
 
-# Example usage:
-# Assume sample is a dictionary with feature values for a new instance
+
+# In[304]:
+
+
 sample = {
     'Survival Months_categorized': '> 47.5',
     'Age_categorized': '> 61.5',
@@ -397,24 +412,74 @@ sample = {
     'Tumor Size_categorized': '> 17.5',
     'Marital Status': 0
 }
-
-# Assuming 'tree' is already defined as your decision tree structure
-prediction = predict(tree, sample)
-print("Predicted class:", prediction)
-
-
-# In[319]:
-
-
-sample = {
+sample2 = {
     'Survival Months_categorized': '<= 47.5',
     'Age_categorized': '> 61.5',
     '6th Stage': 3,
     'Tumor Size_categorized': '> 17.5',
     'Marital Status': 4
 }
-prediction = predict(tree, sample)
-print("Predicted class:", prediction)
+sample3 = {
+    'Survival Months_categorized': '> 47.5',
+    'Age_categorized': '> 61.5',
+    '6th Stage': 2,
+    'Tumor Size_categorized': '> 17.5',
+    'Marital Status': 1
+}
+# Assuming 'tree' is already defined as your decision tree structure
+prediction1 = predict_single(tree, sample)
+prediction2 = predict_single(tree, sample2)
+prediction3 = predict_single(tree, sample3)
+
+print(f"Predicted class for sample 1: {prediction1}\nPredicted class for sample 2: {prediction2}\nPredicted class for sample 3: {prediction3}")
+
+
+# # Evaluation
+
+# In[319]:
+
+
+predictions = dataframe_predict(tree, testset)
+predictions_list = predictions.tolist()
+predictions_list[:5]
+
+
+# In[317]:
+
+
+y_testset=y_testset.tolist()
+predictions_list = predictions.tolist()
+y_testset[:5]
+
+
+# In[320]:
+
+
+for i in range(5):
+    if not(predictions_list[i]==1):
+        print (y_testset[i])
+
+
+# In[324]:
+
+
+def Accuracy(y_pred,y_actual):
+    T_np=0
+    F_np=0
+    for i in range(len(y_pred)):
+        if y_pred[i]==y_actual[i]:
+            T_np+=1
+        else:
+            F_np+=1
+    acc=T_np/(T_np+F_np)
+    return acc
+
+
+# In[325]:
+
+
+acc=Accuracy(predictions_list,y_testset)
+acc
 
 
 # In[ ]:
