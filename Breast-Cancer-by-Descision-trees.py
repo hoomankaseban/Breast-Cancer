@@ -3,19 +3,18 @@
 
 # # IMPORT Libraries
 
-# In[260]:
+# In[403]:
 
 
 import numpy as np
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
 
 # # READ CSV
 
-# In[261]:
+# In[404]:
 
 
 my_data = pd.read_csv("Breast_Cancer.csv", delimiter=",")
@@ -24,13 +23,13 @@ my_data[0:5]
 
 # # Gain some Information
 
-# In[262]:
+# In[405]:
 
 
 my_data['Status'].unique()
 
 
-# In[263]:
+# In[406]:
 
 
 my_data.info()
@@ -38,15 +37,15 @@ my_data.info()
 
 # # Create DataFrame
 
-# In[264]:
+# In[407]:
 
 
 df=pd.DataFrame(my_data)
 
 
-# # Information about quantity of values for each column
+# #### Information about quantity of values for each column
 
-# In[265]:
+# In[408]:
 
 
 for col in df.columns:
@@ -56,9 +55,9 @@ for col in df.columns:
         print()  # Print an empty line for separation
 
 
-# # Gain knowledge about numerical features
+# ### Gain knowledge about numerical features
 
-# In[266]:
+# In[409]:
 
 
 numerical_columns = df.select_dtypes(include=['int', 'float']).columns
@@ -70,100 +69,142 @@ print("Descriptive statistics for numerical columns:")
 print(numerical_stats)
 
 
-# # Feature selection by Descision Trees feature importance
+# ## *
+# ## *
+# ## *
+# # Label Encoding
 
-# ### Selection in numerical features
-
-# In[267]:
-
-
-selected_columns = ['Age', 'Tumor Size', 'Regional Node Examined','Survival Months','Reginol Node Positive',]  # Replace with your actual feature names
-# Separate features and target
-X = df[selected_columns]
-y = df['Status']
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-
-# Train a Decision Tree
-clf = DecisionTreeClassifier(random_state=42)
-clf.fit(X_train, y_train)
+# In[410]:
 
 
-# In[268]:
+df
 
 
-# Get feature importances
-importances = clf.feature_importances_
-importance_series = pd.Series(importances, index=X.columns).sort_values(ascending=False)
-
-print("Feature Importances from Decision Tree:")
-print(importance_series)
-
-
-# ## "Regional Node Examined" and "Reginol Node Positive" should be dropped
-
-# ### Selection in categorical features
-
-# In[269]:
+# In[411]:
 
 
 categorical_columns = ['Status','Marital Status', 'differentiate','Race','T Stage ','Progesterone Status','N Stage','6th Stage','Grade','A Stage','Estrogen Status']  # Your actual feature names
-X_columns = ['Marital Status', 'differentiate','Race','T Stage ','Progesterone Status','N Stage','6th Stage','Grade','A Stage','Estrogen Status']  # Your actual feature names
-
 # Encode categorical features
 label_encoders = {}
 for col in categorical_columns:
     le = LabelEncoder()
     df[col] = le.fit_transform(df[col])
     label_encoders[col] = le
-                
+df
 
 
-# In[270]:
+# ## *
+# ## *
+# ## *
+# # Feature selection by Mutual Information
+
+# In[412]:
 
 
-X = df[X_columns]
-y = df['Status']
+def entropy(labels):
+    """Compute entropy of a list of labels."""
+    unique, counts = np.unique(labels, return_counts=True)
+    probabilities = counts / len(labels)
+    return -np.sum(probabilities * np.log2(probabilities))
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+def mutual_information(X, y):
+    """Compute mutual information between feature matrix X and target vector y."""
+    n_features = X.shape[1]
+    mi_scores = np.zeros(n_features)
+    
+    # Compute entropy of the target variable y
+    H_y = entropy(y)
+    
+    for i in range(n_features):
+        feature_values = X[:, i]
+        
+        # Calculate entropy of the feature
+        H_feature = entropy(feature_values)
+        
+        # Calculate joint entropy between the feature and target
+        joint_entropy = 0
+        unique_feature_values = np.unique(feature_values)
+        for value in unique_feature_values:
+            y_given_feature = y[feature_values == value]
+            prob_y_given_feature = len(y_given_feature) / len(y)
+            H_y_given_feature = entropy(y_given_feature)
+            joint_entropy += prob_y_given_feature * H_y_given_feature
+        
+        # Calculate mutual information
+        mi_scores[i] = H_feature - joint_entropy / H_y
+    
+    return mi_scores
 
-# Train a Decision Tree
-clf = DecisionTreeClassifier(random_state=42)
-clf.fit(X_train, y_train)
+
+# In[413]:
 
 
-# In[271]:
+y=df[['Status']].values
+y
 
 
-# Get feature importances
-importances = clf.feature_importances_
-importance_series = pd.Series(importances, index=X.columns).sort_values(ascending=False)
+# ## Selection in numerical features
 
-print("Feature Importances from Decision Tree:")
-print(importance_series)
+# In[414]:
 
 
-# ## "Marital Status" and "6th stage" are selected
+x_numerical=df[['Age', 'Tumor Size', 'Regional Node Examined','Survival Months','Reginol Node Positive']].values
+x_numerical[:5]
+
+
+# In[415]:
+
+
+mi_scores = mutual_information(x_numerical, y)
+print("Mutual Information Scores:", mi_scores)
+
+
+# ### "Regional Node Examined" and "Reginol Node Positive" should be dropped
+
+# ## Selection in categorical features
+
+# In[416]:
+
+
+x_categorical=df[['Marital Status', 'differentiate','Race','T Stage ','Progesterone Status','N Stage','6th Stage','Grade','A Stage','Estrogen Status']].values
+x_categorical[:5]
+
+
+# In[417]:
+
+
+mi_scores = mutual_information(x_categorical, y)
+print("Mutual Information Scores:", mi_scores)
+
+
+# ### "Marital Status" and "6th stage" are selected
+# ## *
+# ## *
+# ## *
+# 
 
 # # Selecting top features
 # ## There are 3 numerical, 1 categorical, and 1 binary columns
 
-# In[272]:
+# In[418]:
 
 
 columns_to_drop=['T Stage ','N Stage','differentiate','Race','Grade','A Stage','Estrogen Status','Progesterone Status','Reginol Node Positive','Regional Node Examined']
 df.drop(columns=columns_to_drop, inplace=True)  # Use inplace=True to modify the original DataFrame
 
 
-# In[273]:
+# In[419]:
 
 
 df
 
 
+# ## *
+# ## *
+# ## *
 # # Categorizing Numerical features
 
-# In[274]:
+# In[420]:
 
 
 def entropy(y):
@@ -203,28 +244,28 @@ def categorize_numerical_feature(df, feature_name, target_name):
     return df
 
 
-# In[275]:
+# In[421]:
 
 
 df = categorize_numerical_feature(df, 'Age', 'Status')
 df['Age_categorized'].value_counts()
 
 
-# In[276]:
+# In[422]:
 
 
 df = categorize_numerical_feature(df, 'Tumor Size', 'Status')
 df['Tumor Size_categorized'].value_counts()
 
 
-# In[277]:
+# In[423]:
 
 
 df = categorize_numerical_feature(df, 'Survival Months', 'Status')
 df['Survival Months_categorized'].value_counts()
 
 
-# In[278]:
+# In[424]:
 
 
 df
@@ -232,60 +273,43 @@ df
 
 # ### 0 means "Alive", 1 means "Dead"
 
-# In[279]:
+# ## *
+# ## *
+# ## *
+# # Splitter
 
-
-dead_count=int(df['Status'].value_counts().get(1,0))
-alive_count=int(df['Status'].value_counts().get(0,0))
-dataset_size=dead_count+alive_count
-print(f'Dateset size is {dataset_size} \n{alive_count} are alive and {dead_count} are dead')
-
-
-# # Spliting
-
-# In[280]:
+# In[425]:
 
 
 df1=df[['Status','Age_categorized','Marital Status','6th Stage','Survival Months_categorized','Tumor Size_categorized']].copy()
 
 
-# In[281]:
+# In[426]:
 
 
 df1
 
 
-# In[282]:
-
-
-X = df1[['Age_categorized','Marital Status','6th Stage','Survival Months_categorized','Tumor Size_categorized']]
-X[0:5]
-
-
-# In[283]:
-
-
-y=df1['Status']
-y.value_counts()
-
-
-# In[284]:
+# In[427]:
 
 
 trainset, testset = train_test_split(df1, test_size=0.3, random_state=3)
 
 
-# In[285]:
+# In[428]:
 
 
 print(f'Train set size :{len(trainset)}\nTest set size :{len(testset)}')
 
 
-# # Building tree
+# ## *
+# ## *
+# ## *
+# # Building descision tree by ID3
 
 # ### Functions to Calculate IG
 
-# In[286]:
+# In[429]:
 
 
 def entropy(y):
@@ -308,7 +332,7 @@ def information_gain(y, feature_values):
 
 # ### Function to select the best feature to splite
 
-# In[287]:
+# In[430]:
 
 
 def best_feature_to_split(df, target_name):
@@ -327,7 +351,7 @@ def best_feature_to_split(df, target_name):
 
 # ### Main function to build the tree
 
-# In[288]:
+# In[431]:
 
 
 def build_tree(df, target_name):
@@ -357,13 +381,13 @@ def build_tree(df, target_name):
     return tree
 
 
-# In[289]:
+# In[432]:
 
 
 tree = build_tree(trainset, 'Status')
 
 
-# In[290]:
+# In[433]:
 
 
 tree
@@ -371,21 +395,7 @@ tree
 
 # # Predict
 
-# In[291]:
-
-
-y_testset=testset['Status'].copy()
-y_testset
-
-
-# In[295]:
-
-
-x_testset=testset.drop(columns=['Status'])
-x_testset
-
-
-# In[305]:
+# In[434]:
 
 
 def predict_single(tree, sample):
@@ -402,7 +412,7 @@ def dataframe_predict(tree, test_set):
     return predictions
 
 
-# In[304]:
+# In[435]:
 
 
 sample = {
@@ -434,33 +444,12 @@ prediction3 = predict_single(tree, sample3)
 print(f"Predicted class for sample 1: {prediction1}\nPredicted class for sample 2: {prediction2}\nPredicted class for sample 3: {prediction3}")
 
 
-# # Evaluation
+# ## *
+# ## *
+# ## *
+# # Evaluation by Accuracy method
 
-# In[319]:
-
-
-predictions = dataframe_predict(tree, testset)
-predictions_list = predictions.tolist()
-predictions_list[:5]
-
-
-# In[317]:
-
-
-y_testset=y_testset.tolist()
-predictions_list = predictions.tolist()
-y_testset[:5]
-
-
-# In[320]:
-
-
-for i in range(5):
-    if not(predictions_list[i]==1):
-        print (y_testset[i])
-
-
-# In[324]:
+# In[438]:
 
 
 def Accuracy(y_pred,y_actual):
@@ -475,12 +464,37 @@ def Accuracy(y_pred,y_actual):
     return acc
 
 
-# In[325]:
+# In[436]:
 
 
-acc=Accuracy(predictions_list,y_testset)
+y_testset=testset['Status'].copy()
+x_testset=testset.drop(columns=['Status'])
+y_testset[:5]
+
+
+# In[437]:
+
+
+predictions = dataframe_predict(tree, testset)
+predictions[:5]
+
+
+# In[439]:
+
+
+y_testset=y_testset.tolist()
+predictions=predictions.tolist()
+acc=Accuracy(predictions,y_testset)
 acc
 
+
+# # Accuracy of ID3 algorithm is 90 %
+
+# ## *
+# ## *
+# ## *
+# ## *
+# # Cart and C4.5 algorithms...
 
 # In[ ]:
 
